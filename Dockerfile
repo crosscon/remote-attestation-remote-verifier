@@ -5,6 +5,7 @@ WORKDIR /app
 ADD lib/ lib/
 ADD requirements.txt .
 ADD main.py .
+ADD create_keys.py .
 
 RUN pip install -r requirements.txt
 
