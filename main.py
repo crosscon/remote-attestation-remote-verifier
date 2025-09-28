@@ -18,6 +18,7 @@ CA_CERT_PATH = os.environ.get("CA_CERT_PATH", "")
 SSL_KEY_PATH = os.environ.get("SSL_KEY_PATH", "")
 SSL_CERT_PATH = os.environ.get("SSL_CERT_PATH", "")
 TARGET_VALUE_PATH = os.environ.get("TARGET_VALUE_PATH", "")
+NONCE_DB_PATH = os.environ.get("NONCE_DB_PATH", "")
 
 CA_KEY = import_ecc_key(
     CA_KEY_PATH
@@ -36,6 +37,21 @@ SSL_CERT = import_certificate(
 enrolled = []
 
 
+def check_nonce(n: str) -> bool:
+    with open(NONCE_DB_PATH) as f:
+        past_nonces = f.read().splitlines()
+
+    if n in past_nonces:
+        return False
+
+    past_nonces.append(n)
+
+    with open(NONCE_DB_PATH, "w") as f:
+        f.write("\n".join(past_nonces))
+
+    return True
+
+
 def sign_csr(csr: bytes) -> bytes:
     return sign_csr_with_ecc_ca(
         csr,
@@ -46,6 +62,8 @@ def sign_csr(csr: bytes) -> bytes:
 
 with open(TARGET_VALUE_PATH, "rb") as f:
     VERIFIED_HASH = create_hash(f.read())
+
+
 
 
 def handle_client(client: socket.socket | ssl.SSLSocket, remote_id: str | None):
@@ -90,7 +108,13 @@ def handle_client(client: socket.socket | ssl.SSLSocket, remote_id: str | None):
                 elif cmd[0] == "ATTEST":
                     if remote_id != None:
                         print(f"Attestation request from '{remote_id}': {cmd[1]}")
-                        if cmd[1] == VERIFIED_HASH:
+
+                        nonce = cmd[2]
+                        print(f"Provided nonce: '{nonce}'")
+
+                        if not check_nonce(nonce):
+                            client.send("ERR\nREUSE\n\n")
+                        elif cmd[1] == VERIFIED_HASH:
                             client.send(b"SUCC\n\n")
                         else:
                             client.send(b"ERR\nINV\n\n")
@@ -138,6 +162,7 @@ def main():
 
     while True:
         client, _ = sock.accept()
+        print("Incoming connection!")
         try:
             wrapped_client = context.wrap_socket(
                 client,

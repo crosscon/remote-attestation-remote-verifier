@@ -18,6 +18,7 @@ This container requires two certificates (with private key) and a binary file to
 - `SSL_CERT_PATH`: path to the TLS certificate used for the server
 - `SSL_KEY_PATH`: path to the key for the TLS server certificate
 - `TARGET_VALUE_PATH`: path to the file which contains the content of the memory as it should be to get a positive attestation result
+- `NONCE_DB_PATH`: path to the file which keeps track of already used nonces to prevent reuse (must be provided as an initially empty file)
 
 How the volumes are mounted can be arbitrary as long as the environment variables are adjusted.
 
